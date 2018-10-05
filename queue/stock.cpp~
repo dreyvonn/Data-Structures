@@ -1,0 +1,132 @@
+/***********************************************************************
+ * Implementation:
+ *    STOCK
+ * Summary:
+ *    This will contain the implementation for stocksBuySell() as well
+ *    as any other function or class implementation you need
+ * Author
+ *    <your names here>
+ **********************************************************************/
+
+#include <iostream>    // for ISTREAM, OSTREAM, CIN, and COUT
+#include <string>      // for STRING
+#include <cassert>     // for ASSERT
+#include "stock.h"     // for STOCK_TRANSACTION
+#include "queue.h"     // for QUEUE
+#include "dollars.h"
+using namespace std;
+using namespace custom;
+
+void sell(int amount, queue <Stock> &q, Stock s, queue <Stock> history);
+void display(Dollars price, queue <Stock> &q);
+/************************************************
+ * STOCKS BUY SELL
+ * The interactive function allowing the user to
+ * buy and sell stocks
+ ***********************************************/
+void stocksBuySell()
+{
+   // instructions
+   cout << "This program will allow you to buy and sell stocks. "
+        << "The actions are:\n";
+   cout << "  buy 200 $1.57   - Buy 200 shares at $1.57\n";
+   cout << "  sell 150 $2.15  - Sell 150 shares at $2.15\n";
+   cout << "  display         - Display your current stock portfolio\n";
+   cout << "  quit            - Display a final report and quit the program\n";
+
+   string action; 
+   int amount;
+   Dollars price;
+   bool quit = false;
+   Stock s;
+   queue <Stock> q;
+   queue <Stock> history;
+
+   while (!quit)
+   {
+      cout << "> ";
+      cin >> action;
+
+      switch (action[0])
+      {
+         case 'B':
+         case 'b':
+            cin >> amount;
+            cin >> price;
+            s.setAmount(amount);
+            s.setPrice(price);
+            q.push(s);
+         break;
+         case 's':
+         case 'S':
+            
+            cin >> amount;
+            cin >> price;
+            s.setPrice(price);
+            s.setAmount(amount);
+            sell(amount, q, s, history);
+            /*for (int i = 0; i < amount; ++i)
+            {
+               price - q.front().getPrice();
+               q.front().setAmount(q.front().getAmount() - 1);
+               cerr << "amount " << q.front().getAmount() << endl;
+               }*/
+         break;
+         case 'd':
+         case 'D':
+            display(price, q);
+         break;
+         case 'q':
+         case 'Q':
+            quit = true;
+         break;
+         default:
+            cout << "invalid action" << endl;
+      }
+   }
+}
+void display(Dollars price, queue <Stock>& q)
+{
+   queue <Stock> qTemp;
+   int tempSize= 0;
+   qTemp = q;
+   tempSize = qTemp.size();
+   
+   cout << "Currently held:" << endl;
+   for (int i = 0; i < tempSize; ++i)
+   {
+      cout << "\tBought " 
+           << qTemp.front().getAmount() 
+           << " shares at " 
+           << qTemp.front().getPrice() 
+           << endl;
+      qTemp.pop();
+   }
+   // qTemp = history;
+   // tempSize = qTemp.size();
+   
+   cout << "Sell History:" << endl;
+   /*  for (int i = 0; i < tempSize; ++i)
+   {
+      cout << "\tSold " 
+           << qTemp.front().getAmount() 
+           << " shares at " 
+           << qTemp.front().getPrice() 
+           << endl;
+      qTemp.pop();
+      }*/
+}
+
+void sell(int amount, queue <Stock>& q, Stock s, queue <Stock> history)
+{
+   //amount being sold is more than the oldest batch
+   if (s.getAmount() >= q.front().getAmount())
+   {
+      history.push(q.front());
+      //not working when 0
+      q.pop();
+      s.setAmount(s.getAmount() - q.front().getAmount());
+      cerr << "amount " << s.getAmount() << endl;
+      cerr << q.front().getPrice() << endl;
+   }
+}

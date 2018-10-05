@@ -1,0 +1,572 @@
+/***********************************************************************
+ * Header:
+ *    set
+ * Summary:
+ *    This class contains the notion of an set: a bucket to hold
+ *    data for the user. This is just a starting-point for more advanced
+ *    constainers such as the set, set, set, set, set, and map
+ *    which we will build later this semester.
+ *
+ *    This will contain the class definition of:
+ *       set             : similar to std::set
+ *       set :: iterator : an iterator through the set
+ * Author
+ *    Sam Haymond, Emily Peck
+ ************************************************************************/
+
+#ifndef SET_H
+#define SET_H
+
+#include <cassert>  // because I am paranoid
+#include <cmath>
+
+// a little helper macro to write debug code
+#ifdef NDEBUG
+#define Debug(statement)
+#else
+#define Debug(statement) statement
+#endif // !NDEBUG
+
+namespace custom
+{
+
+/************************************************
+ * set
+ * A class that holds stuff
+ ***********************************************/
+template <class T>
+class set
+{
+public:
+   // constructors and destructors
+   set() : data(NULL), iFront(0), iBack(-1), numCapacity(0), numElements(0) {}
+   set(int numCapacity)               throw (const char *);
+   set(const set & rhs)               throw (const char *);
+  ~set()       { if (data != NULL) delete [] data;   }
+   set & operator = (const set & rhs) throw (const char *);
+   
+   // standard container interfaces
+   // set treats size and max_size the same
+   int  size()     const { return numElements;        }
+   int capacity()  const { return numCapacity;        }
+   bool empty()    const { return size() == 0;        }
+
+   //void resize(const int newCapacity) throw (const char *);
+
+   void clear() { iFront = 0; iBack = -1; }
+   void insert(const T & t) throw (const char *);
+   void erase(typename set <T> :: iterator & it);
+   typename set <T> :: iterator find(const T & t);
+
+   //overloaded operators
+   set <T> operator ||(const set <T> & rhs) const throw(const char *);
+   set <T> operator &&(const set <T> & rhs) const throw(const char *);
+   set <T> operator - (const set <T> & rhs) const throw(const char *);
+
+   // the various iterator interfaces
+   class iterator;
+   iterator begin()      { return iterator (data); }
+   iterator end();
+
+   T & back()                      throw (const char *);
+   T back()        const           throw (const char *);
+   T & front()                     throw (const char *);
+   T front()       const           throw (const char *);
+   void push_back( const T & rhs)  throw (const char *); 
+   void push_front(const T & rhs)  throw (const char *); 
+   void pop_back(); 
+   void pop_front(); 
+   int iHead()       { assert(numCapacity); return iFront % numCapacity; }
+   int iTail()     const { return (iBack - 1) % numCapacity; }
+   int getiFront() { return iFront; }
+   int getiBack()  { return iBack;  }
+   int iNormalize(int iRelative);
+
+private:
+   // a debug utility to display the set
+   Debug(void display() const); 
+   void resize(const int newCapacity) throw (const char *);
+   int findIndex(const T & t) const;
+   T * data;              // dynamically allocated set of T
+   int numCapacity;
+   int numElements;
+   int iFront;
+   int iBack;
+};
+
+/**************************************************
+ * ARRAY ITERATOR
+ * An iterator through array
+ *************************************************/
+template <class T>
+class set <T> :: iterator
+{
+public:
+   // constructors, destructors, and assignment operator
+   iterator()      : p(NULL)      {              }
+   iterator(T * p) : p(p)         {              }
+   iterator(const iterator & rhs) { *this = rhs; }
+   iterator & operator = (const iterator & rhs)
+   {
+      this->p = rhs.p;
+      return *this;
+   }
+
+   // equals, not equals operator
+   bool operator != (const iterator & rhs) const { return rhs.p != this->p; }
+   bool operator == (const iterator & rhs) const { return rhs.p == this->p; }
+
+   // dereference operator
+         T & operator * ()       { return *p; }
+   const T & operator * () const { return *p; }
+
+   // prefix increment
+   iterator & operator ++ ()
+   {
+      p++;
+      return *this;
+   }
+
+   // postfix increment
+   iterator operator ++ (int postfix)
+   {
+      iterator tmp(*this);
+      p++;
+      return tmp;
+   }
+   
+private:
+   T * p;
+};
+
+
+/********************************************
+ * ARRAY :: END
+ * Note that you have to use "typename" before
+ * the return value type
+ ********************************************/
+template <class T>
+typename set <T> :: iterator set <T> :: end ()
+{
+   return iterator (data + numElements);
+}
+
+/*******************************************
+ * set :: Assignment
+ *******************************************/
+template <class T>
+set <T> & set <T> :: operator = (const set <T> & rhs)
+          throw (const char *)
+{
+   clear();
+
+   if (capacity() < rhs.size())
+   {
+      resize(rhs.size());
+   }
+
+   for (int i = rhs.iFront; i < rhs.iBack + 1; i++)
+   {
+      push_back(rhs.data[iNormalize(i)]);
+   }
+
+   numElements = rhs.size();
+
+   return *this;
+}
+
+/*******************************************
+ * set :: Union
+ *******************************************/
+template <class T> 
+set <T> set <T> :: operator ||(const set <T> & rhs) const throw (const char *)
+{
+   return *this;
+}
+
+/*******************************************
+ * set :: Intersection
+ *******************************************/
+template <class T>
+set <T> set <T> :: operator &&(const set <T> & rhs) const throw (const char*)
+{
+   return *this;
+}
+
+/*******************************************
+ * set :: Difference
+ *******************************************/
+template <class T>
+set <T> set <T> :: operator -(const set <T> & rhs) const throw (const char*)
+{
+   return *this;
+}
+
+/*******************************************
+ * set :: COPY CONSTRUCTOR
+ *******************************************/
+template <class T>
+set <T> :: set(const set <T> & rhs) throw (const char *)
+{
+   assert(rhs.size() >= 0);
+      
+   // do nothing if there is nothing to do
+   if (rhs.size() == 0 || rhs.numCapacity == 0)
+   {
+      iBack       = -1;
+      iFront      = 0;
+      data        = NULL;
+      numCapacity = 0;
+      numElements = 0;
+      return;
+   }
+
+   // attempt to allocate
+   try
+   {
+      data = new T[rhs.numCapacity];
+   }
+   catch (std::bad_alloc)
+   {
+      throw "ERROR: Unable to allocate buffer";
+   }
+   
+   // copy over the capacity
+   iBack       = rhs.iBack;
+   iFront      = rhs.iFront;
+   numCapacity = rhs.numCapacity;
+
+   // copy the items over one at a time using the assignment operator
+   for (int i = 0; i < numCapacity; i++)
+      data[i] = rhs.data[i];
+}
+
+/**********************************************
+ * set : NON-DEFAULT CONSTRUCTOR
+ * Preallocate the set to "capacity"
+ **********************************************/
+template <class T>
+set <T> :: set(int numCapacity) throw (const char *)
+{
+   assert(numCapacity >= 0);
+   
+   // do nothing if there is nothing to do.
+   // since we can't grow an set, this is kinda pointless
+   if (numCapacity == 0)
+   {
+      this->iBack   = -1;
+      this->iFront  = 0;
+      this->data    = NULL;
+      numCapacity   = 0;
+      numElements   = 0;
+      return;
+   }
+
+   // attempt to allocate
+   try
+   {
+      data = new T[numCapacity];
+   }
+   catch (std::bad_alloc)
+   {
+      throw "ERROR: Unable to allocate buffer";
+   }
+
+      
+   // copy over the stuff
+    this->iBack   = -1;
+    this->iFront  = 0;
+    this->numCapacity = numCapacity;
+    this->numElements = numElements;
+}
+
+#ifndef NDEBUG
+/********************************************
+ * set : DISPLAY
+ * A debug utility to display the contents of the set
+ *******************************************/
+template <class T>
+void set <T> :: display() const
+{
+   std::cerr << "set<T>::display()\n";
+   std::cerr << "\tnumElements = " << size() << "\n";
+   for (int i = 0; i < size(); i++)
+      std::cerr << "\tdata[" << i << "] = " << data[i] << "\n";
+}
+
+
+/*******************************************
+ * set : to resize and set that isn't
+ * large enough. 
+ *******************************************/
+template <class T>
+void set <T> :: resize(int newCapacity) throw (const char *)
+{
+   if (numCapacity == 0)
+   {
+      numCapacity = 1;    
+   }
+
+   int iBackNew = size() - 1;
+   T *pNew; //create temporary pointer
+
+   try
+   {
+      pNew = new T[newCapacity]; //point to temporary class
+      assert(numCapacity);
+      int j = iNormalize(iFront);
+
+      for (int i = 0; i < size(); i++, j = (j + 1) % numCapacity)
+      {
+         if (data != NULL)
+         {
+            pNew[i] = data[j]; //copy over data from old to new
+         }
+      }
+
+      delete [] data; //delete old data
+
+      data = pNew; //point to new object
+
+      numCapacity = newCapacity;
+      iBack       = iBackNew;
+      iFront      = 0;
+   }
+
+   catch (std::bad_alloc)
+   {
+      throw "ERROR: Unable to allocate buffer";
+   }
+}
+
+/*******************************************
+ * set :INSERT take some element and add it to
+ *        the set.
+ *******************************************/
+template <class T>
+int set <T> :: findIndex(const T & t) const
+{
+   int iBegin = 0;
+   int iEnd = numElements - 1;
+
+   while (iBegin <= iEnd)
+   {
+      int iMiddle = (iBegin + iEnd) / 2;
+      if (t == data[iMiddle])
+         return iMiddle;
+      if (t < data[iMiddle])
+         iEnd = (iMiddle - 1);
+      else
+         iBegin = (iMiddle + 1);
+   }
+   
+   return numElements;
+}
+/*******************************************
+ * set :INSERT take some element and add it to
+ *        the set.
+ *******************************************/
+template <class T>
+void set <T> :: insert(const T & t) throw (const char *)
+{
+   std::cerr << "findindex 1 " << std::endl;
+   int iInsert = findIndex(t);
+   std::cerr << "findindex 2 " << std::endl;
+   if (data[iInsert] != t)
+   {
+      std::cerr << "Inside If" << std::endl;
+      for (int i = numElements - 1; i >= iInsert; i--)
+      {
+         std::cerr << "Inside For" << std::endl;
+         data[i + 1] = data[i];
+      }
+      data[iInsert] = t;
+      std::cerr << "after" << std::endl;
+      numElements++;
+   }
+}
+
+/*******************************************
+ * set :ERASE erases element from the set
+ *******************************************/
+template <class T>
+void set <T> :: erase(typename set <T> :: iterator & it)
+{
+   
+}
+
+/*******************************************
+ * set :FIND find some element and add it to
+ *        the set.
+ *******************************************/
+template <class T>
+typename set <T> :: iterator set <T> :: find(const T & t)
+{
+   std::cerr << "find" << std::endl;
+   //is this how iterators are returned?
+   int iBegin = 0;
+   int iEnd = numElements - 1;
+   while (iBegin <= iEnd)
+   {
+      int iMiddle = (iBegin + iEnd) / 2;
+      if (t == data[iMiddle])
+         return iterator(data + iMiddle);
+      if (t < data[iMiddle])
+         iEnd = (iMiddle - 1);
+      else
+         iBegin = (iMiddle + 1);
+   }
+   
+   return end();
+}
+
+/*******************************************
+ * set :PUSH take some element and add it to
+ *        the set.
+ *******************************************/
+template <class T>
+   void set <T> :: push_back(const T & rhs) throw (const char *)
+{
+   //iBack++;
+   if (numCapacity == 0)
+   {
+      numCapacity = 1;
+      //data = new T[numCapacity];
+      resize(numCapacity);
+
+   }
+
+   if (size() == numCapacity)
+   {
+      resize(numCapacity * 2);
+   }
+
+   iBack++;
+   //data[(iNormalize(iBack)) % numCapacity] = rhs;
+   data[iNormalize(iBack)] = rhs;
+}
+
+/*******************************************
+ * set :PUSH take some element and add it to
+ *        the set.
+ *******************************************/
+template <class T>
+   void set <T> :: push_front(const T & rhs) throw (const char *)
+{
+   //iFront--;
+   if (numCapacity == 0)
+   {
+      numCapacity = 1;
+      resize(numCapacity);
+   }
+
+   if (size() == numCapacity)
+   {
+      resize(numCapacity * 2);
+   }
+
+   iFront--;
+   //data[(iNormalize(iFront)) % numCapacity] = rhs;
+   data[iNormalize(iFront)] = rhs;
+}
+
+/*******************************************
+ * set :POP take some element and add it to
+ *        the set.
+ *******************************************/
+template <class T>
+void set<T>::pop_back()
+{
+   if (size() == 0)
+      return;
+   iBack--;
+}
+
+/*******************************************
+ * set :POP take some element and add it to
+ *        the set.
+ *******************************************/
+template <class T>
+void set<T>::pop_front()
+{
+   if (size() == 0)
+      return;
+   iFront++;
+}
+
+/*******************************************
+ * set :BACK take some element and add it to
+ *        the set.
+ *******************************************/
+template <class T>
+T set <T> :: back() const throw(const char *)
+{
+   if (!empty())
+      return data[iNormalize(iBack)];
+   else
+      throw "ERROR: unable to access data from an empty set";
+}
+
+/*******************************************
+ * set :BACK take some element and add it to
+ *        the set.
+ *******************************************/
+template <class T>
+T & set <T> :: back() throw (const char *)
+{
+   if (!empty())
+   {
+      return data[iNormalize(iBack)];
+   }
+   else
+      throw "ERROR: unable to access data from an empty set";
+}
+
+/*******************************************
+ * set :FRONT take some element and add it to
+ *        the set.
+ *******************************************/
+template <class T>
+T set <T> :: front() const throw(const char *)
+{
+   if (!empty())
+   {
+      return data[iNormalize(iFront)];
+   }
+   else
+      throw "ERROR: unable to access data from an empty set";
+}
+
+/*******************************************
+ * set :FRONT take some element and add it to
+ *        the set.
+ *******************************************/
+template <class T>
+T & set <T> :: front() throw (const char *)
+{
+   if (!empty())
+   {
+      return data[iNormalize(iFront)];
+   }
+   else
+      throw "ERROR: unable to access data from an empty set";
+}
+
+/*****************************************************
+ * I NORMALIZE
+ * The function we will need for set to convert a
+ * potentially negative index into one between 0 and size()
+ *****************************************************/
+template <class T>
+int set <T> :: iNormalize(int iRelative)
+{
+   int div = (1 + (std::abs(iRelative)/capacity()));
+   return ((iRelative + (div * capacity())) % capacity()); 
+}
+
+#endif // NDEBUG
+
+}; // namespace custom
+
+#endif // set_H
+

@@ -1,0 +1,387 @@
+/***********************************************************************
+ * Header:
+ *    deque
+ * Summary:
+ *    This class contains the notion of an deque: a bucket to hold
+ *    data for the user. This is just a starting-point for more advanced
+ *    constainers such as the deque, set, deque, deque, deque, and map
+ *    which we will build later this semester.
+ *
+ *    This will contain the class definition of:
+ *       deque             : similar to std::deque
+ *       deque :: iterator : an iterator through the deque
+ * Author
+ *    Sam Haymond, Emily Peck
+ ************************************************************************/
+
+#ifndef DEQUE_H
+#define DEQUE_H
+
+#include <cassert>  // because I am paranoid
+#include <cmath>
+
+// a little helper macro to write debug code
+#ifdef NDEBUG
+#define Debug(statement)
+#else
+#define Debug(statement) statement
+#endif // !NDEBUG
+
+namespace custom
+{
+
+/************************************************
+ * deque
+ * A class that holds stuff
+ ***********************************************/
+template <class T>
+class deque
+{
+public:
+   // constructors and destructors
+   deque() : data(NULL), iFront(0), iBack(-1), numCapacity(0) {}
+   deque(int numCapacity)                 throw (const char *);
+   deque(const deque & rhs)               throw (const char *);
+  ~deque()       { if (data != NULL) delete [] data;   }
+   deque & operator = (const deque & rhs) throw (const char *);
+   
+   // standard container interfaces
+   // deque treats size and max_size the same
+   int  size()     const { return iBack - iFront + 1; }
+   
+   int capacity()  const { return numCapacity;        }
+   bool empty()    const { return size() == 0;        }
+   //void resize(const int newCapacity) throw (const char *);
+
+   void clear() { iFront = 0; iBack = -1; }
+   T & back()                      throw (const char *);
+   T back()        const           throw (const char *);
+   T & front()                     throw (const char *);
+   T front()       const           throw (const char *);
+   void push_back( const T & rhs)  throw (const char *); 
+   void push_front(const T & rhs)  throw (const char *); 
+   void pop_back(); 
+   void pop_front(); 
+   int iHead()       { assert(numCapacity); return iFront % numCapacity; }
+   int iTail()     const { return (iBack - 1) % numCapacity; }
+   int getiFront() { return iFront; }
+   int getiBack()  { return iBack;  }
+   int iNormalize(int iRelative);
+
+private:
+   // a debug utility to display the deque
+   Debug(void display() const); 
+   void resize(const int newCapacity) throw (const char *);
+
+   T * data;              // dynamically allocated deque of T
+   int numCapacity;
+   int iFront;
+   int iBack;
+};
+
+/*******************************************
+ * deque :: Assignment
+ *******************************************/
+template <class T>
+deque <T> & deque <T> :: operator = (const deque <T> & rhs)
+          throw (const char *)
+{
+   clear();
+
+   if (capacity() < rhs.size())
+   {
+      resize(rhs.size());
+   }
+
+   for (int i = rhs.iFront; i < rhs.iBack + 1; i++)
+   {
+      push_back(rhs.data[iNormalize(i)]);
+   }
+
+   return *this;
+}
+
+/*******************************************
+ * deque :: COPY CONSTRUCTOR
+ *******************************************/
+template <class T>
+deque <T> :: deque(const deque <T> & rhs) throw (const char *)
+{
+   assert(rhs.size() >= 0);
+      
+   // do nothing if there is nothing to do
+   if (rhs.size() == 0 || rhs.numCapacity == 0)
+   {
+      iBack       = -1;
+      iFront      = 0;
+      data        = NULL;
+      numCapacity = 0;
+      return;
+   }
+
+   // attempt to allocate
+   try
+   {
+      data = new T[rhs.numCapacity];
+   }
+   catch (std::bad_alloc)
+   {
+      throw "ERROR: Unable to allocate buffer";
+   }
+   
+   // copy over the capacity
+   iBack       = rhs.iBack;
+   iFront      = rhs.iFront;
+   numCapacity = rhs.numCapacity;
+
+   // copy the items over one at a time using the assignment operator
+   for (int i = 0; i < numCapacity; i++)
+      data[i] = rhs.data[i];
+}
+
+/**********************************************
+ * deque : NON-DEFAULT CONSTRUCTOR
+ * Preallocate the deque to "capacity"
+ **********************************************/
+template <class T>
+deque <T> :: deque(int numCapacity) throw (const char *)
+{
+   assert(numCapacity >= 0);
+   
+   // do nothing if there is nothing to do.
+   // since we can't grow an deque, this is kinda pointless
+   if (numCapacity == 0)
+   {
+      this->iBack   = -1;
+      this->iFront  = 0;
+      this->data    = NULL;
+      numCapacity   = 0;
+      return;
+   }
+
+   // attempt to allocate
+   try
+   {
+      data = new T[numCapacity];
+   }
+   catch (std::bad_alloc)
+   {
+      throw "ERROR: Unable to allocate buffer";
+   }
+
+      
+   // copy over the stuff
+    this->iBack   = -1;
+    this->iFront  = 0;
+    this->numCapacity = numCapacity;
+}
+
+#ifndef NDEBUG
+/********************************************
+ * deque : DISPLAY
+ * A debug utility to display the contents of the deque
+ *******************************************/
+template <class T>
+void deque <T> :: display() const
+{
+   std::cerr << "deque<T>::display()\n";
+   std::cerr << "\tnumElements = " << size() << "\n";
+   for (int i = 0; i < size(); i++)
+      std::cerr << "\tdata[" << i << "] = " << data[i] << "\n";
+}
+
+
+/*******************************************
+ * deque : to resize and deque that isn't
+ * large enough. 
+ *******************************************/
+template <class T>
+void deque <T> :: resize(int newCapacity) throw (const char *)
+{
+   if (numCapacity == 0)
+   {
+      numCapacity = 1;    
+   }
+
+   int iBackNew = size() - 1;
+   T *pNew; //create temporary pointer
+
+   try
+   {
+      pNew = new T[newCapacity]; //point to temporary class
+      assert(numCapacity);
+      int j = iNormalize(iFront);
+
+      for (int i = 0; i < size(); i++, j = (j + 1) % numCapacity)
+      {
+         if (data != NULL)
+         {
+            pNew[i] = data[j]; //copy over data from old to new
+         }
+      }
+
+      delete [] data; //delete old data
+
+      data = pNew; //point to new object
+
+      numCapacity = newCapacity;
+      iBack       = iBackNew;
+      iFront      = 0;
+   }
+
+   catch (std::bad_alloc)
+   {
+      throw "ERROR: Unable to allocate buffer";
+   }
+}
+
+/*******************************************
+ * deque :PUSH take some element and add it to
+ *        the deque.
+ *******************************************/
+template <class T>
+   void deque <T> :: push_back(const T & rhs) throw (const char *)
+{
+   //iBack++;
+   if (numCapacity == 0)
+   {
+      numCapacity = 1;
+      //data = new T[numCapacity];
+      resize(numCapacity);
+
+   }
+
+   if (size() == numCapacity)
+   {
+      resize(numCapacity * 2);
+   }
+
+   iBack++;
+   //data[(iNormalize(iBack)) % numCapacity] = rhs;
+   data[iNormalize(iBack)] = rhs;
+}
+
+/*******************************************
+ * deque :PUSH take some element and add it to
+ *        the deque.
+ *******************************************/
+template <class T>
+   void deque <T> :: push_front(const T & rhs) throw (const char *)
+{
+   //iFront--;
+   if (numCapacity == 0)
+   {
+      numCapacity = 1;
+      resize(numCapacity);
+   }
+
+   if (size() == numCapacity)
+   {
+      resize(numCapacity * 2);
+   }
+
+   iFront--;
+   //data[(iNormalize(iFront)) % numCapacity] = rhs;
+   data[iNormalize(iFront)] = rhs;
+}
+
+/*******************************************
+ * deque :POP take some element and add it to
+ *        the deque.
+ *******************************************/
+template <class T>
+void deque<T>::pop_back()
+{
+   if (size() == 0)
+      return;
+   iBack--;
+}
+
+/*******************************************
+ * deque :POP take some element and add it to
+ *        the deque.
+ *******************************************/
+template <class T>
+void deque<T>::pop_front()
+{
+   if (size() == 0)
+      return;
+   iFront++;
+}
+
+/*******************************************
+ * deque :BACK take some element and add it to
+ *        the deque.
+ *******************************************/
+template <class T>
+T deque <T> :: back() const throw(const char *)
+{
+   if (!empty())
+      return data[iNormalize(iBack)];
+   else
+      throw "ERROR: unable to access data from an empty deque";
+}
+
+/*******************************************
+ * deque :BACK take some element and add it to
+ *        the deque.
+ *******************************************/
+template <class T>
+T & deque <T> :: back() throw (const char *)
+{
+   if (!empty())
+   {
+      return data[iNormalize(iBack)];
+   }
+   else
+      throw "ERROR: unable to access data from an empty deque";
+}
+
+/*******************************************
+ * deque :FRONT take some element and add it to
+ *        the deque.
+ *******************************************/
+template <class T>
+T deque <T> :: front() const throw(const char *)
+{
+   if (!empty())
+   {
+      return data[iNormalize(iFront)];
+   }
+   else
+      throw "ERROR: unable to access data from an empty deque";
+}
+
+/*******************************************
+ * deque :FRONT take some element and add it to
+ *        the deque.
+ *******************************************/
+template <class T>
+T & deque <T> :: front() throw (const char *)
+{
+   if (!empty())
+   {
+      return data[iNormalize(iFront)];
+   }
+   else
+      throw "ERROR: unable to access data from an empty deque";
+}
+
+/*****************************************************
+ * I NORMALIZE
+ * The function we will need for deque to convert a
+ * potentially negative index into one between 0 and size()
+ *****************************************************/
+template <class T>
+int deque <T> :: iNormalize(int iRelative)
+{
+   int div = (1 + (std::abs(iRelative)/capacity()));
+   return ((iRelative + (div * capacity())) % capacity()); 
+}
+
+#endif // NDEBUG
+
+}; // namespace custom
+
+#endif // deque_H
+

@@ -1,0 +1,359 @@
+/***********************************************************************
+ * Header:
+ *    map
+ * Summary:
+ *    This class contains the notion of an map: a bucket to hold
+ *    data for the user. This is just a starting-point for more advanced
+ *    constainers such as the map, set, stack, queue, deque, and map
+ *    which we will build later this semester.
+ *
+ *    This will contain the class definition of:
+ *       map             : similar to std::map
+ *       map :: iterator : an iterator through the map
+ * Author
+ *    Sam Haymond
+ ************************************************************************/
+
+#ifndef MAP_H
+#define MAP_H
+
+#include <cassert>  // because I am paranoid
+#include <cmath>
+#include <iostream>
+#include "bst.h"
+#include "pair.h"
+#include "bnode.h"
+//using std::size_t;
+
+// a little helper macro to write debug code
+#ifdef NDEBUG
+#define Debug(statement)
+#else
+#define Debug(statement) statement
+#endif // !NDEBUG
+
+//using namespace std;
+
+namespace custom
+{
+   
+/************************************************
+ * map
+ * A class that holds stuff
+ ***********************************************/
+template<class K, class V>
+class map
+{
+public:
+   // constructors and destructors
+   map() {}
+   //map(int num)                  throw (const char *);
+   map(const map <K, V> & rhs)        throw (const char *);
+  ~map() { clear(); }
+   map & operator = (const map <K, V> & rhs) throw (const char *);
+   
+   // standard container interfaces
+   // map treats size and max_size the same
+   int  size () const { return bst.size();  }
+   bool empty() const { return size() == 0; }
+   //int  max_size() const { return num;                 }
+   
+   // map-specific interfaces
+   // what would happen if I passed -1 or something greater than num?
+   V & operator [] (const K & k)       throw (const char *);//{ return data[index];}
+   V   operator [] (const K & k) const throw (const char *);//{ return data[index];}
+   
+   // the various iterator interfaces
+   class iterator;
+   iterator begin()      { return iterator (bst.begin()); }
+   iterator end();
+   
+   /*int capacity() const { return numCapacity; }
+   bool empty() const { return num == 0; }
+   void resize(const int newCapacity);
+   void push_back(T var);*/
+   void clear();
+
+private:
+   // a debug utility to display the map
+   Debug(void display() const); 
+
+   BST <Pair<K, V> > bst;
+
+   /*K * data;              // dynamically allocated map of T
+   V * data2;
+   int num;               // both the capacity and the number of elements
+   int numCapacity;*/
+};
+
+/**************************************************
+ * map ITERATOR
+ * An iterator through map
+ *************************************************/
+template <class K, class V>
+class map <K, V> :: iterator
+{
+public:
+   // constructors, destructors, and assignment operator
+   iterator() {              }
+   //iterator(T * p) : p(p)         {              }
+   iterator(const iterator & rhs) { *this = rhs; }
+   iterator(const typename BST <Pair<K, V> > :: iterator & rhs) { *this = rhs; }
+   iterator & operator = (const iterator & rhs)
+   {
+      it = rhs.it;
+      return *this;
+   }
+
+
+   // equals, not equals operator
+   bool operator != (const iterator & rhs) const { return it != rhs.it; }
+   bool operator == (const iterator & rhs) const { return it == rhs.it; }
+
+   // dereference operator
+   Pair <K, V> & operator * ()       { return *it; }
+   const Pair <K, V> & operator * () const { return *it; }
+
+   // prefix increment
+   iterator & operator ++ ()
+   {
+      it++;
+      return *this;
+   }
+
+   // postfix increment
+   iterator operator ++ (int postfix)
+   {
+      iterator tmp(*this);
+      it++;
+      return tmp;
+   }
+   
+private:
+   typename BST <Pair<K, V> > :: iterator it;
+   //T * p;
+};
+
+
+/********************************************
+ * map :: END
+ * Note that you have to use "typename" before
+ * the return value type
+ ********************************************/
+template <class K, class V>
+typename map <K, V> :: iterator map <K, V> :: end ()
+{
+   return iterator (bst.end());
+}
+
+/*******************************************
+ * map :: Assignment
+ *******************************************/
+template <class K, class V>
+map <K, V> & map <K, V> :: operator = (const map <K, V> & rhs)
+          throw (const char *)
+{
+
+   bst = rhs.bst;
+   /*while (numCapacity < rhs.num)
+   {
+      resize(numCapacity * 2);
+   }
+
+   num = rhs.num;
+
+   for (int i = 0; i < num; i++)
+   {
+      data[i] = rhs.data[i];
+   }*/
+
+   return *this;
+}
+
+/*******************************************
+ * map :: COPY CONSTRUCTOR
+ *******************************************/
+template <class K, class V>
+map <K, V> :: map(const map <K, V> & rhs) throw (const char *)
+{
+   //assert(rhs.num >= 0);
+      
+   // do nothing if there is nothing to do
+   /*if (rhs.BST.size() == 0)
+   {
+      return;
+   }*/
+
+   *this = rhs;
+
+   // attempt to allocate
+   /*try
+   {
+      data = new T[rhs.num];
+   }
+   catch (std::bad_alloc)
+   {
+      throw "ERROR: Unable to allocate buffer";
+   }
+   
+   // copy over the capacity
+   num = rhs.num;
+   numCapacity = rhs.numCapacity;
+
+   // copy the items over one at a time using the assignment operator
+   for (int i = 0; i < num; i++)
+      data[i] = rhs.data[i];*/
+}
+
+/**********************************************
+ * map : NON-DEFAULT CONSTRUCTOR
+ * Preallocate the map to "capacity"
+ **********************************************/
+/*template <class K, class V>
+map <K, V> :: map(int num) throw (const char *)
+{
+   assert(num >= 0);
+   
+   // do nothing if there is nothing to do.
+   // since we can't grow an map, this is kinda pointless
+   if (num == 0)
+   {
+      this->num = 0;
+      this->data = NULL;
+      numCapacity = 0;
+      return;
+   }
+
+   // attempt to allocate
+   try
+   {
+      data = new T[num];
+   }
+   catch (std::bad_alloc)
+   {
+      throw "ERROR: Unable to allocate buffer";
+   }
+
+      
+   // copy over the stuff
+   this->num = num;
+   numCapacity = num;
+}*/
+
+#ifndef NDEBUG
+
+template <class K, class V>
+V  map <K,V> :: operator [] (const K & k) const throw (const char *)
+{
+   Pair <K,V> p;
+   map<K, V> :: iterator it;
+   it = bst.find(p);
+   if ( it.getIt() != NULL)
+      return *it.second;
+   else
+   {
+      bst.insert(p);
+      return bst.find(p).second;
+   }
+   
+}
+
+template <class K, class V>
+V & map<K,V> :: operator [] (const K & k) throw (const char *)
+{
+   Pair <K,V> p(k, V());
+   map<K, V> :: iterator it;
+   it = bst.find(p);
+   if ( it != end())
+      return *it.second;
+   else
+   {
+      bst.insert(p);
+      return bst.find(p).second;
+   }
+
+}
+
+/********************************************
+ * map : DISPLAY
+ * A debug utility to display the contents of the map
+ *******************************************/
+/*template <class K, class V>
+void map <K, V> :: display() const
+{
+   std::cerr << "map<K, V>::display()\n";
+   std::cerr << "\tnum = " << num << "\n";
+   for (int i = 0; i < num; i++)
+      std::cerr << "\tdata[" << i << "] = " << data[i] << "\n";
+}*/
+
+
+/*******************************************
+ * map : to resize and map that isn't
+ * large enough. 
+ *******************************************/
+/*template <class K, class V>
+void map <K, V> :: resize(int newCapacity)
+{
+   T *pNew;
+
+   try
+   {
+      pNew = new T[newCapacity];
+
+      for (int i = 0; i < size(); ++i)
+      {
+         pNew[i] = data[i];
+      }
+
+      delete [] data;
+
+      data = pNew;
+
+      numCapacity = newCapacity;
+   }
+
+   catch (std::bad_alloc)
+   {
+      throw "ERROR: Unable to allocate buffer";
+   }
+}
+*/
+/*******************************************
+ * map : take some element and add it to
+ *          the map.
+ *******************************************/
+/*template <class K, class V>
+void map <K, V> :: push_back(T var)
+{
+   if (numCapacity == 0)
+   {
+      resize(1);
+   }
+
+   if (num == numCapacity)
+   {
+      resize(numCapacity * 2);
+   }
+
+   data[num] = var;
+   num++;
+}*/
+
+/*******************************************
+ * map : clears the map, makes the 
+ *          num of elements zero. 
+ *******************************************/
+template <class K, class V>
+void map <K, V> :: clear()
+{
+   bst.clear();
+   return;
+}
+
+#endif // NDEBUG
+
+}; // namespace custom
+
+#endif // map_H
+

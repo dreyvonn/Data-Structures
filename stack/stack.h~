@@ -1,0 +1,321 @@
+/***********************************************************************
+ * Header:
+ *    Array
+ * Summary:
+ *    This class contains the notion of an array: a bucket to hold
+ *    data for the user. This is just a starting-point for more advanced
+ *    constainers such as the stack, set, stack, queue, deque, and map
+ *    which we will build later this semester.
+ *
+ *    This will contain the class definition of:
+ *       array             : similar to std::array
+ *       array :: iterator : an iterator through the array
+ * Author
+ *    Sam Haymond
+ ************************************************************************/
+
+#ifndef STACK_H
+#define STACK_H
+
+#include <cassert>  // because I am paranoid
+
+// a little helper macro to write debug code
+#ifdef NDEBUG
+#define Debug(statement)
+#else
+#define Debug(statement) statement
+#endif // !NDEBUG
+
+namespace custom
+{
+
+/************************************************
+ * ARRAY
+ * A class that holds stuff
+ ***********************************************/
+template <class T>
+class stack
+{
+public:
+   // constructors and destructors
+   stack() : data(NULL), numElements(0), numElementsCapacity(0) {}
+   stack(int numElements)                  throw (const char *);
+   stack(const stack & rhs)        throw (const char *);
+  ~stack()                         { delete [] data;   }
+   stack & operator = (const stack & rhs) throw (const char *);
+   
+   // standard container interfaces
+   // array treats size and max_size the same
+   int  size()     const { return numElements;                 }
+   int  max_size() const { return numElements;                 }
+   
+   // array-specific interfaces
+   // what would happen if I passed -1 or something greater than numElements?
+   T & operator [] (int index)       throw (const char *){ return data[index];}
+   T   operator [] (int index) const throw (const char *){ return data[index];}
+   
+   // the various iterator interfaces
+   class iterator;
+   iterator begin()      { return iterator (data); }
+   iterator end();
+   
+   int capacity() const { return numElementsCapacity; }
+   bool empty() const { return numElements == 0; }
+   void resize(const int newCapacity);
+//   void push(T var);
+   void clear();
+   T & top() throw (const char *);
+   T top() const throw (const char *);
+   void push(const T & rhs) throw (const char *);  
+   void pop(); 
+
+private:
+   // a debug utility to display the array
+   Debug(void display() const); 
+
+   T * data;              // dynamically allocated array of T
+   int numElements;               // both the capacity and the numElementsber of elements
+   int numElementsCapacity;
+};
+
+/**************************************************
+ * ARRAY ITERATOR
+ * An iterator through array
+ *************************************************/
+template <class T>
+class stack <T> :: iterator
+{
+public:
+   // constructors, destructors, and assignment operator
+   iterator()      : p(NULL)      {              }
+   iterator(T * p) : p(p)         {              }
+   iterator(const iterator & rhs) { *this = rhs; }
+   iterator & operator = (const iterator & rhs)
+   {
+      this->p = rhs.p;
+      return *this;
+   }
+
+   // equals, not equals operator
+   bool operator != (const iterator & rhs) const { return rhs.p != this->p; }
+   bool operator == (const iterator & rhs) const { return rhs.p == this->p; }
+
+   // dereference operator
+         T & operator * ()       { return *p; }
+   const T & operator * () const { return *p; }
+
+   // prefix increment
+   iterator & operator ++ ()
+   {
+      p++;
+      return *this;
+   }
+
+   // postfix increment
+   iterator operator ++ (int postfix)
+   {
+      iterator tmp(*this);
+      p++;
+      return tmp;
+   }
+   
+private:
+   T * p;
+};
+
+
+/********************************************
+ * ARRAY :: END
+ * Note that you have to use "typename" before
+ * the return value type
+ ********************************************/
+template <class T>
+typename stack <T> :: iterator stack <T> :: end ()
+{
+   return iterator (data + numElements);
+}
+
+/*******************************************
+ * ARRAY :: Assignment
+ *******************************************/
+template <class T>
+stack <T> & stack <T> :: operator = (const stack <T> & rhs)
+          throw (const char *)
+{
+   while (numElementsCapacity < rhs.numElements)
+   {
+      resize(numElementsCapacity * 2);
+   }
+
+   numElements = rhs.numElements;
+
+   for (int i = 0; i < numElements; i++)
+   {
+      data[i] = rhs.data[i];
+   }
+
+   return *this;
+}
+
+/*******************************************
+ * ARRAY :: COPY CONSTRUCTOR
+ *******************************************/
+template <class T>
+stack <T> :: stack(const stack <T> & rhs) throw (const char *)
+{
+   assert(rhs.numElements >= 0);
+      
+   // do nothing if there is nothing to do
+   if (rhs.numElements == 0)
+   {
+      numElements = 0;
+      data = NULL;
+      numElementsCapacity = 0;
+      return;
+   }
+
+   // attempt to allocate
+   try
+   {
+      data = new T[rhs.numElements];
+   }
+   catch (std::bad_alloc)
+   {
+      throw "ERROR: Unable to allocate buffer";
+   }
+   
+   // copy over the capacity
+   numElements = rhs.numElements;
+   numElementsCapacity = rhs.numElementsCapacity;
+
+   // copy the items over one at a time using the assignment operator
+   for (int i = 0; i < numElements; i++)
+      data[i] = rhs.data[i];
+}
+
+/**********************************************
+ * ARRAY : NON-DEFAULT CONSTRUCTOR
+ * Preallocate the array to "capacity"
+ **********************************************/
+template <class T>
+stack <T> :: stack(int numElements) throw (const char *)
+{
+   assert(numElements >= 0);
+   
+   // do nothing if there is nothing to do.
+   // since we can't grow an array, this is kinda pointless
+   if (numElements == 0)
+   {
+      this->numElements = 0;
+      this->data = NULL;
+      numElementsCapacity = 0;
+      return;
+   }
+
+   // attempt to allocate
+   try
+   {
+      data = new T[numElements];
+   }
+   catch (std::bad_alloc)
+   {
+      throw "ERROR: Unable to allocate buffer";
+   }
+
+      
+   // copy over the stuff
+   this->numElements = numElements;
+   numElementsCapacity = numElements;
+}
+
+#ifndef NDEBUG
+/********************************************
+ * ARRAY : DISPLAY
+ * A debug utility to display the contents of the array
+ *******************************************/
+template <class T>
+void stack <T> :: display() const
+{
+   std::cerr << "stack<T>::display()\n";
+   std::cerr << "\tnumElements = " << numElements << "\n";
+   for (int i = 0; i < numElements; i++)
+      std::cerr << "\tdata[" << i << "] = " << data[i] << "\n";
+}
+
+
+/*******************************************
+ * stack : to resize and stack that isn't
+ * large enough. 
+ *******************************************/
+template <class T>
+void stack <T> :: resize(int newCapacity)
+{
+   T *pNew;
+
+   try
+   {
+      pNew = new T[newCapacity];
+
+      for (int i = 0; i < size(); ++i)
+      {
+         pNew[i] = data[i];
+      }
+
+      delete [] data;
+
+      data = pNew;
+
+      numElementsCapacity = newCapacity;
+   }
+
+   catch (std::bad_alloc)
+   {
+      throw "ERROR: Unable to allocate buffer";
+   }
+}
+
+/*******************************************
+ * stack :PUSH take some element and add it to
+ *        the stack.
+ *******************************************/
+template <class T>
+void stack <T> :: push(T var)
+{
+   if (numElementsCapacity == 0)
+   {
+      resize(1);
+   }
+
+   if (numElements == numElementsCapacity)
+   {
+      resize(numElementsCapacity * 2);
+   }
+
+   data[numElements] = var;
+   numElements++;
+}
+
+/*******************************************
+ * stack CLEAR : clears the stack, makes the 
+ *          numElements of elements zero. 
+ *******************************************/
+template <class T>
+void stack <T> :: clear()
+{
+   numElements = 0;
+}
+
+template <class T>
+void stack<T>::pop()
+{
+   if (numElements == 0)
+      return;
+   numElements--;
+}
+
+#endif // NDEBUG
+
+}; // namespace custom
+
+#endif // ARRAY_H
+

@@ -1,0 +1,32 @@
+###############################################################
+# Program:
+#     Assignment 09, Binary Search Tree
+#     Brother Helfrich, CS265
+# Author:
+#     Emily Barrera, Sam Haymond, Emily Peck
+# Summary:
+#     This program acts as a Binary Search Tree, it orders the 
+#     nodes from left to right. The most difficult part of 
+#     this assignment was the erase function, case 3.
+# Time:
+#     Together: 8hrs.
+#     Emily Barrera: 2 hrs
+#     Emily Peck: 2 hrs
+#     Sam Haymond: 2hrs
+#     Total: 14 hrs
+###############################################################
+
+##############################################################
+# The main rule
+##############################################################
+a.out: assignment09.o
+	g++ -o a.out assignment09.o -g
+	tar -cf assignment09.tar *.h *.cpp makefile
+
+##############################################################
+# The individual components
+#      assignment09.o     : the driver program
+##############################################################
+assignment09.o: bnode.h bst.h stack.h assignment09.cpp sortBinary.h
+	g++ -c assignment09.cpp -g
+
